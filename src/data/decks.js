@@ -252,7 +252,7 @@ export const decks = [
     ],
     included: ["100-card Commander deck", "Pilot guide booklet", "Equipment synergy reference card", "Upgrade path guide", "Storage sleeve set"],
     featured: true,
-    premium: false,
+    premium: true,
     quantity: 1,
     stripePrice: "price_1TdOzn2iRe5T5JCTzdEp4qjE",
     ourCost: 200,
