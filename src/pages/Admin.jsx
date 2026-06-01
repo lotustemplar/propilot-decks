@@ -620,11 +620,15 @@ export default function Admin() {
         const dl = d.fullDecklist || [];
         const hasCards   = dl.some(s => s.cards && s.cards.length > 0);
         const hasFixedNames = dl.some(s => fixed.includes(s.section));
+        // Pull in elite fields from source if this deck got upgraded to CORE/ELITE after last admin save
+        const elitePatch = src.elitePrice != null && d.elitePrice == null
+          ? { elitePrice: src.elitePrice, eliteStripePrice: src.eliteStripePrice || '', eliteDecklist: src.eliteDecklist || [], eliteIncluded: src.eliteIncluded || [] }
+          : {};
         if (!hasCards || !hasFixedNames) {
           // Restore from source; preserve admin-only fields (price, qty, stripePrice…)
-          return { ...d, fullDecklist: src.fullDecklist };
+          return { ...d, fullDecklist: src.fullDecklist, ...elitePatch };
         }
-        return d;
+        return { ...d, ...elitePatch };
       });
 
       // Also add any brand-new decks from source not yet in localStorage
@@ -638,6 +642,7 @@ export default function Admin() {
 
   const [editing, setEditing]     = useState(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [decklistTier, setDecklistTier] = useState('core'); // 'core' | 'elite' — controls which decklist is shown in edit view
   const [savedFlash, setSaved]    = useState(false);
   const [exportFlash, setExport]  = useState(false);
   // push status: 'idle' | 'pushing' | 'done' | 'error'
@@ -699,7 +704,10 @@ export default function Admin() {
     const refreshed = deckList.map(d => {
       const src = sourceById[d.id];
       if (!src) return d;
-      return { ...d, fullDecklist: src.fullDecklist };
+      const elitePatch = src.elitePrice != null && d.elitePrice == null
+        ? { elitePrice: src.elitePrice, eliteStripePrice: src.eliteStripePrice || '', eliteDecklist: src.eliteDecklist || [], eliteIncluded: src.eliteIncluded || [] }
+        : {};
+      return { ...d, fullDecklist: src.fullDecklist, ...elitePatch };
     });
 
     // Add brand-new decks from source
@@ -741,8 +749,10 @@ export default function Admin() {
     const copy = JSON.parse(JSON.stringify(d));
     // Always normalize to the 5 fixed sections so old data in localStorage migrates cleanly
     copy.fullDecklist = normalizeDecklist(copy.fullDecklist);
+    if (copy.eliteDecklist) copy.eliteDecklist = normalizeDecklist(copy.eliteDecklist);
     setEditing(copy);
     setActiveTab('basic');
+    setDecklistTier('core');
   }
   function deleteDeck(id) {
     if (!window.confirm('Delete this deck?')) return;
@@ -924,6 +934,11 @@ export default function Admin() {
   }
   function setSectionCards(i, text) {
     updateSection(i, 'cards', text.split('\n').map(c => c.trim()).filter(Boolean));
+  }
+  function setEliteSectionCards(i, text) {
+    const cards = text.split('\n').map(c => c.trim()).filter(Boolean);
+    const dl = normalizeDecklist(editing.eliteDecklist);
+    set('eliteDecklist', dl.map((s, idx) => idx === i ? { ...s, cards } : s));
   }
 
   // ── Export ───────────────────────────────────────────────────────────────────
@@ -1674,6 +1689,84 @@ export default function Admin() {
                     set('image', previewUrl || buildImagePath(filename));
                   }}
                 />
+
+                {/* ── Elite Tier ─────────────────────────────────────────────── */}
+                <div className="p-4 rounded-xl bg-white/3 border border-white/8 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Elite Tier</p>
+                      <p className="text-xs text-gray-600 mt-0.5">Adds a premium upsell tier with a separate decklist, price, and included items.</p>
+                    </div>
+                    <Toggle
+                      checked={editing.elitePrice != null}
+                      onChange={v => {
+                        if (v) {
+                          setEditing(p => ({
+                            ...p,
+                            elitePrice: Math.round(p.price * 1.7),
+                            eliteStripePrice: '',
+                            eliteDecklist: normalizeDecklist(p.fullDecklist),
+                            eliteIncluded: [...(p.included || [])],
+                          }));
+                        } else {
+                          setEditing(p => {
+                            const next = { ...p };
+                            delete next.elitePrice;
+                            delete next.eliteStripePrice;
+                            delete next.eliteDecklist;
+                            delete next.eliteIncluded;
+                            return next;
+                          });
+                        }
+                      }}
+                      label="Enable Elite tier"
+                    />
+                  </div>
+
+                  {editing.elitePrice != null && (
+                    <div className="space-y-3 pt-1 border-t border-white/8">
+                      <div className="grid sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Elite Price ($)</label>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={editing.elitePrice ?? ''}
+                            onChange={e => set('elitePrice', parseFloat(e.target.value) || 0)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm
+                              focus:outline-none focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Elite Stripe Price ID</label>
+                          <input
+                            type="text"
+                            value={editing.eliteStripePrice ?? ''}
+                            onChange={e => set('eliteStripePrice', e.target.value.trim())}
+                            placeholder="price_…  (paste from Stripe dashboard)"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm
+                              font-mono placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
+                          Elite Included <span className="text-gray-600 normal-case font-normal">(one item per line)</span>
+                        </label>
+                        <textarea
+                          value={(editing.eliteIncluded || []).join('\n')}
+                          onChange={e => set('eliteIncluded', e.target.value.split('\n').map(l => l.trim()).filter(Boolean))}
+                          rows={5}
+                          placeholder={"100-card Commander deck\nPilot guide booklet\nElite Build upgrade card\nUpgrade path guide\nStorage sleeve set"}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white text-sm
+                            placeholder-gray-600 focus:outline-none focus:border-blue-500 leading-relaxed resize-none transition-colors"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        💡 Go to the <strong className="text-gray-400">Decklist</strong> tab to edit the Elite 100-card list separately from Core.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -1704,15 +1797,56 @@ export default function Admin() {
             {/* Decklist tab */}
             {activeTab === 'decklist' && (
               <div className="space-y-4">
+                {/* Core / Elite switcher — only shown when Elite is enabled */}
+                {editing.elitePrice != null && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1 p-1 rounded-xl bg-white/3 border border-white/8 w-fit">
+                      <button
+                        onClick={() => setDecklistTier('core')}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                          decklistTier === 'core' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        Core
+                      </button>
+                      <button
+                        onClick={() => setDecklistTier('elite')}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors`}
+                        style={decklistTier === 'elite'
+                          ? { background: `${editing.accentColor}33`, color: editing.accentColor }
+                          : { color: '#6b7280' }}
+                      >
+                        Elite ✦
+                      </button>
+                    </div>
+                    <span className="text-xs text-gray-600">
+                      {decklistTier === 'core' ? `$${editing.price} — Core decklist` : `$${editing.elitePrice} — Elite decklist`}
+                    </span>
+                  </div>
+                )}
+
                 <p className="text-xs text-gray-500">One card per line per section. Sections are fixed.</p>
                 {FIXED_DECKLIST_SECTIONS.map((sectionName, i) => {
-                  const section = (editing.fullDecklist || [])[i] ?? { section: sectionName, cards: [] };
+                  const isElite = editing.elitePrice != null && decklistTier === 'elite';
+                  const activeDL = isElite
+                    ? normalizeDecklist(editing.eliteDecklist)
+                    : (editing.fullDecklist || []);
+                  const section = activeDL[i] ?? { section: sectionName, cards: [] };
                   return (
-                    <div key={sectionName} className="p-4 rounded-xl bg-white/3 border border-white/8">
+                    <div key={`${decklistTier}-${sectionName}`}
+                      className="p-4 rounded-xl border"
+                      style={{
+                        background: 'rgba(255,255,255,0.018)',
+                        borderColor: isElite ? `${editing.accentColor}33` : 'rgba(255,255,255,0.08)',
+                      }}
+                    >
                       <p className="text-sm font-semibold text-white mb-3">{sectionName}</p>
                       <textarea
                         value={section.cards.join('\n')}
-                        onChange={e => setSectionCards(i, e.target.value)}
+                        onChange={e => isElite
+                          ? setEliteSectionCards(i, e.target.value)
+                          : setSectionCards(i, e.target.value)
+                        }
                         rows={Math.max(4, section.cards.length + 2)}
                         placeholder="One card per line…"
                         className="w-full bg-[#0a0e1a] border border-white/8 rounded-lg px-3 py-2.5 text-gray-300 text-sm
