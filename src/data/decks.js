@@ -300,7 +300,7 @@ export const decks = [
     included: ["100-card Commander deck", "Pilot guide booklet", "Assassin token pack", "Brotherhood reference card", "Upgrade path guide", "Storage sleeve set"],
     featured: true,
     premium: false,
-    quantity: 0,
+    quantity: 1,
     stripePrice: "price_1TdOj22iRe5T5JCTlIicbjBn",
     ourCost: 0,
     slug: "ezio-auditore-da-firenze-commander-deck",
