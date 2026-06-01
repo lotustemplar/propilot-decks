@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   const { priceId, deckName, deckPrice, sleeveOption, sleeveColor, sleevePrice, couponCode } = req.body;
 
-  if (!priceId) return res.status(400).json({ error: 'Missing priceId' });
+  if (!priceId && !deckPrice) return res.status(400).json({ error: 'Missing priceId or deckPrice' });
 
   // Shipping rates
   const FREE_SHIPPING_RATE     = process.env.STRIPE_SHIPPING_FREE;
@@ -33,7 +33,19 @@ export default async function handler(req, res) {
   const couponDef = allCoupons.find(c => c.active && c.code.toLowerCase() === couponKey) ?? null;
 
   // Build line items — deck + optional sleeve add-on
-  const lineItems = [{ price: priceId, quantity: 1 }];
+  // Use an existing Stripe price ID when available; otherwise create an ad-hoc price_data
+  // (used for Elite builds that don't yet have a dedicated Stripe price ID)
+  const deckLineItem = priceId
+    ? { price: priceId, quantity: 1 }
+    : {
+        price_data: {
+          currency: 'usd',
+          product_data: { name: deckName || 'Commander Deck' },
+          unit_amount: Math.round(Number(deckPrice) * 100),
+        },
+        quantity: 1,
+      };
+  const lineItems = [deckLineItem];
 
   if (sleeveOption && sleeveOption !== 'none' && Number(sleevePrice) > 0) {
     const isSingle = sleeveOption === 'single';

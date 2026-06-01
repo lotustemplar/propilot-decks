@@ -134,7 +134,9 @@ export default function DeckDetail({ animationsEnabled }) {
   }
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const isPlaceholderPrice = !activeStripePrice ||
+  // Block checkout only for known placeholder/test IDs — an empty stripePrice is fine
+  // because the API will fall back to ad-hoc price_data using activePrice
+  const isPlaceholderPrice = !!activeStripePrice &&
     ['price_MEREN','price_ELSHA','price_KRENKO','price_RHYS',
      'price_ATRAXA','price_LIESA','price_TEYSA','price_ULALEK']
       .some(p => activeStripePrice.startsWith(p));
