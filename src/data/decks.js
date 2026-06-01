@@ -225,7 +225,7 @@ export const decks = [
     id: 12,
     name: "Cloud, Ex-SOLDIER",
     commander: "Cloud, Ex-SOLDIER",
-    price: 109.99,
+    price: 307,
     bracket: 3,
     colors: ["white","red","green"],
     colorLabel: "Naya",
@@ -254,10 +254,10 @@ export const decks = [
     featured: true,
     premium: false,
     quantity: 1,
-    stripePrice: "",
-    ourCost: 0,
+    stripePrice: "price_1TdOzn2iRe5T5JCTzdEp4qjE",
+    ourCost: 200,
     slug: "cloud-ex-soldier-commander-deck",
-    elitePrice: 189.99,
+    elitePrice: 387,
     eliteStripePrice: "",
     eliteDecklist: [
       { section: "Commander", cards: ["Cloud, Ex-SOLDIER"] },
@@ -266,7 +266,7 @@ export const decks = [
       { section: "Interaction & Protection", cards: ["Akroma's Will","Austere Command","Beast Within","Boros Charm","Chaos Warp","Cloud's Limit Break","Farewell","Generous Gift","Heroic Intervention","Path to Exile","Swords to Plowshares","Unfinished Business","Vandalblast"] },
       { section: "Lands", cards: ["Battlefield Forge","Brushland","Buried Ruin","Cabaretti Courtyard","Canopy Vista","Cinder Glade","Clifftop Retreat","Command Tower","Evolving Wilds","Exotic Orchard","Forest x4","Fortified Village","Game Trail","Karplusan Forest","Kessig Wolf Run","Mountain x4","Naya Panorama","Path of Ancestry","Plains x4","Rogue's Passage","Rootbound Crag","Sunhome, Fortress of the Legion","Sunpetal Grove","Temple of Abandon","Temple of Plenty","Temple of Triumph","Terramorphic Expanse"] }
     ],
-    eliteIncluded: ["100-card Commander deck", "Pilot guide booklet", "Equipment synergy reference card", "Elite Build upgrade card", "Upgrade path guide", "Storage sleeve set"],
+    eliteIncluded: ["1 Akroma's Will", "1 Brotherhood Regalia", "1 Buster Sword", "1 Heroic Intervention", "1 Steelshaper's Gift", "1 Tifa, Martial Artist", "1 Ultima Weapon"],
   },
   {
     id: 11,
