@@ -83,6 +83,9 @@ export default function DeckDetail({ animationsEnabled }) {
   const [buyError, setBuyError]       = useState(null);
   const [showSleeve, setShowSleeve]   = useState(false);
 
+  // Tier state (core | elite)
+  const [tier, setTier] = useState('core');
+
   // Coupon state
   const [couponInput, setCouponInput]   = useState('');
   const [couponApplied, setCouponApplied] = useState(false);
@@ -98,14 +101,21 @@ export default function DeckDetail({ animationsEnabled }) {
 
   if (!deck) return <Navigate to="/shop" replace />;
 
+  // ── Tier-derived values ───────────────────────────────────────────────────────
+  const hasTiers          = !!deck.elitePrice;
+  const activePrice       = hasTiers && tier === 'elite' ? deck.elitePrice       : deck.price;
+  const activeStripePrice = hasTiers && tier === 'elite' ? (deck.eliteStripePrice ?? '') : deck.stripePrice;
+  const activeDecklist    = hasTiers && tier === 'elite' ? (deck.eliteDecklist   ?? deck.fullDecklist) : deck.fullDecklist;
+  const activeIncluded    = hasTiers && tier === 'elite' ? (deck.eliteIncluded   ?? deck.included)    : deck.included;
+
   // ── Coupon logic ─────────────────────────────────────────────────────────────
   // Build lookup from the shared coupons data file (same source as admin panel)
   const VALID_COUPONS = Object.fromEntries(
     allCoupons.filter(c => c.active).map(c => [c.code.toLowerCase(), c])
   );
   const activeCoupon  = couponApplied ? VALID_COUPONS[couponInput.toLowerCase().trim()] : null;
-  const discountAmt   = activeCoupon ? Math.round(deck.price * activeCoupon.percent) / 100 : 0;
-  const finalPrice    = (deck.price - discountAmt).toFixed(2);
+  const discountAmt   = activeCoupon ? Math.round(activePrice * activeCoupon.percent) / 100 : 0;
+  const finalPrice    = (activePrice - discountAmt).toFixed(2);
 
   function applyCoupon() {
     const key = couponInput.toLowerCase().trim();
@@ -124,10 +134,10 @@ export default function DeckDetail({ animationsEnabled }) {
   }
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const isPlaceholderPrice = !deck.stripePrice ||
+  const isPlaceholderPrice = !activeStripePrice ||
     ['price_MEREN','price_ELSHA','price_KRENKO','price_RHYS',
      'price_ATRAXA','price_LIESA','price_TEYSA','price_ULALEK']
-      .some(p => deck.stripePrice.startsWith(p));
+      .some(p => activeStripePrice.startsWith(p));
 
   // Step 1 — open sleeve upsell modal (or skip straight to checkout if not configured)
   const handleBuyNow = () => {
@@ -148,9 +158,9 @@ export default function DeckDetail({ animationsEnabled }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: deck.stripePrice,
-          deckName: deck.name,
-          deckPrice: deck.price,
+          priceId: activeStripePrice,
+          deckName: hasTiers ? `${deck.name} (${tier === 'elite' ? 'Elite' : 'Core'})` : deck.name,
+          deckPrice: activePrice,
           sleeveOption,
           sleeveColor,
           sleevePrice,
@@ -354,19 +364,66 @@ export default function DeckDetail({ animationsEnabled }) {
                     </Section>
                     <Section title="What's Included">
                       <ul className="pt-3 space-y-1.5">
-                        {deck.included.map(item => (
+                        {activeIncluded.map(item => (
                           <li key={item} className="flex items-center gap-2">
                             <span className="text-green-400 text-xs">✓</span> {item}
                           </li>
                         ))}
                       </ul>
                     </Section>
+
+                    {/* Core vs Elite comparison — only shown for tiered decks */}
+                    {hasTiers && (
+                      <Section title="Core vs Elite — Compare Builds">
+                        <div className="pt-3 overflow-x-auto">
+                          <table className="w-full text-sm border-collapse">
+                            <thead>
+                              <tr>
+                                <th className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wider pb-3 pr-4 w-1/3"></th>
+                                <th className="text-center text-xs font-bold pb-3 pr-4 text-gray-300">CORE</th>
+                                <th className="text-center text-xs font-bold pb-3" style={{ color: deck.accentColor }}>ELITE ✦</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                              {[
+                                { feature: 'Power target',    core: 'Bracket 3',         elite: 'Bracket 3 upgraded' },
+                                { feature: 'Price',           core: `$${deck.price}`,    elite: `$${deck.elitePrice}` },
+                                { feature: 'Best for',        core: 'Casual Commander',  elite: 'Players wanting more power' },
+                                { feature: 'Premium cards',   core: 'Limited',           elite: 'Included' },
+                                { feature: 'Complexity',      core: 'Easy–Medium',       elite: 'Medium' },
+                                { feature: 'Upgrade path',    core: 'Built-in',          elite: 'Already upgraded' },
+                              ].map(row => (
+                                <tr key={row.feature}>
+                                  <td className="py-2.5 pr-4 text-gray-500 text-xs">{row.feature}</td>
+                                  <td className="py-2.5 pr-4 text-center text-gray-300 text-xs">{row.core}</td>
+                                  <td className="py-2.5 text-center text-xs" style={{ color: deck.accentColor }}>{row.elite}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </Section>
+                    )}
                   </div>
                 )}
 
                 {activeTab === 'Decklist' && (
                   <div className="space-y-4">
-                    {deck.fullDecklist.map(section => (
+                    {hasTiers && (
+                      <div className="flex gap-2 mb-1">
+                        {['core','elite'].map(t => (
+                          <button key={t} onClick={() => setTier(t)}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border ${
+                              tier === t ? 'text-white border-white/20 bg-white/8' : 'text-gray-500 border-white/8 hover:text-gray-300'
+                            }`}
+                            style={tier === t && t === 'elite' ? { background: `${deck.accentColor}15`, borderColor: `${deck.accentColor}40`, color: deck.accentColor } : {}}
+                          >
+                            {t === 'elite' ? 'Elite ✦' : 'Core'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {activeDecklist.map(section => (
                       <div key={section.section} className="glass rounded-xl p-4 border border-white/8">
                         <h3 className="font-display font-semibold text-white mb-3 text-sm">{section.section}</h3>
                         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1">
@@ -417,11 +474,53 @@ export default function DeckDetail({ animationsEnabled }) {
                 <span className="text-xs text-purple-300 font-medium">Handcrafted · Never mass-produced · Limited runs</span>
               </div>
 
+              {/* ── Tier selector (only when deck has CORE + ELITE) ── */}
+              {hasTiers && (
+                <div className="mb-5">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Choose Your Build</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { setTier('core'); setCouponApplied(false); setCouponInput(''); }}
+                      className={`flex-1 py-2.5 px-3 rounded-xl border text-sm font-bold transition-all text-left ${
+                        tier === 'core'
+                          ? 'border-white/25 bg-white/8 text-white'
+                          : 'border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/15'
+                      }`}
+                    >
+                      <div>CORE</div>
+                      <div className="text-xs font-normal text-gray-500 mt-0.5">${deck.price}</div>
+                    </button>
+                    <button
+                      onClick={() => { setTier('elite'); setCouponApplied(false); setCouponInput(''); }}
+                      className={`flex-1 py-2.5 px-3 rounded-xl border text-sm font-bold transition-all text-left ${
+                        tier === 'elite' ? 'text-white' : 'border-white/8 text-gray-500 hover:text-gray-300 hover:border-white/15'
+                      }`}
+                      style={tier === 'elite' ? {
+                        background: `${deck.accentColor}15`,
+                        borderColor: `${deck.accentColor}50`,
+                      } : {}}
+                    >
+                      <div className="flex items-center gap-1">
+                        ELITE <span style={{ color: deck.accentColor }}>✦</span>
+                      </div>
+                      <div className="text-xs font-normal mt-0.5" style={{ color: tier === 'elite' ? deck.accentColor : undefined }}>
+                        ${deck.elitePrice}
+                      </div>
+                    </button>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-600 leading-relaxed">
+                    {tier === 'core'
+                      ? 'Focused strategy · Bracket 3 · Best for casual Commander nights'
+                      : 'Premium finishers · Stronger protection · More explosive combat turns'}
+                  </div>
+                </div>
+              )}
+
               {/* Price */}
               <div className="flex items-baseline gap-2 mb-4 flex-wrap">
                 {activeCoupon ? (
                   <>
-                    <span className="text-2xl font-display font-bold text-gray-500 line-through">${deck.price}</span>
+                    <span className="text-2xl font-display font-bold text-gray-500 line-through">${activePrice}</span>
                     <span className="text-4xl font-display font-bold text-white">${finalPrice}</span>
                     <span className="text-sm text-gray-500">USD</span>
                     <span className="text-xs font-bold text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-full">
@@ -430,7 +529,7 @@ export default function DeckDetail({ animationsEnabled }) {
                   </>
                 ) : (
                   <>
-                    <span className={`text-4xl font-display font-bold ${soldOut ? 'text-gray-500' : 'text-white'}`}>${deck.price}</span>
+                    <span className={`text-4xl font-display font-bold ${soldOut ? 'text-gray-500' : 'text-white'}`}>${activePrice}</span>
                     <span className="text-sm text-gray-500">USD</span>
                     {soldOut && <span className="ml-1 text-xs font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">SOLD OUT</span>}
                   </>
@@ -546,7 +645,7 @@ export default function DeckDetail({ animationsEnabled }) {
                   >
                     {buying
                       ? <><Loader2 size={18} className="animate-spin" /> Redirecting to checkout…</>
-                      : <><ShoppingCart size={18} /> Buy Now — ${activeCoupon ? finalPrice : deck.price}</>
+                      : <><ShoppingCart size={18} /> Buy Now — ${activeCoupon ? finalPrice : activePrice}</>
                     }
                   </button>
                   {buyError && <p className="text-xs text-center text-red-400 mb-3">{buyError}</p>}
@@ -582,11 +681,55 @@ export default function DeckDetail({ animationsEnabled }) {
       </div>
 
       {/* Footer */}
-      <footer className="bg-[#020817] border-t border-white/5 py-8">
+      <footer className="bg-[#020817] border-t border-white/5 py-8 pb-28 lg:pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center text-xs text-gray-700">
           Lotus Pro Decks — Expert-Built. Beginner-Ready. Not affiliated with Wizards of the Coast.
         </div>
       </footer>
+
+      {/* ── Sticky mobile buy bar ──────────────────────────────────────────────
+          Shown on mobile/tablet (hidden on lg+) so the user always has a
+          one-tap path to checkout no matter how far they scroll.           */}
+      {!soldOut && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40
+          bg-[#0a0e1a]/95 backdrop-blur-md border-t border-white/10
+          px-4 py-3 flex items-center gap-3 safe-bottom">
+          {/* Price info */}
+          <div className="flex-1 min-w-0">
+            {activeCoupon ? (
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-lg font-display font-bold text-white">${finalPrice}</span>
+                <span className="text-sm text-gray-500 line-through">${activePrice}</span>
+                <span className="text-xs text-green-400 font-semibold">-{activeCoupon.percent}%</span>
+              </div>
+            ) : (
+              <span className="text-lg font-display font-bold text-white">${activePrice}</span>
+            )}
+            {hasTiers && (
+              <div className="text-xs text-gray-500 mt-0.5">
+                {tier === 'elite' ? 'Elite Build ✦' : 'Core Build'}
+              </div>
+            )}
+          </div>
+
+          {/* Buy button */}
+          <button
+            onClick={handleBuyNow}
+            disabled={buying}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-white
+              transition-all disabled:opacity-70 shrink-0"
+            style={{
+              background: `linear-gradient(135deg, ${deck.accentColor}, ${deck.accentColor}99)`,
+              boxShadow: `0 4px 16px ${deck.accentColor}44`,
+            }}
+          >
+            {buying
+              ? <><Loader2 size={15} className="animate-spin" /> Redirecting…</>
+              : <><ShoppingCart size={15} /> Buy Now</>
+            }
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -154,8 +154,17 @@ export default function DeckCard({ deck, animationsEnabled }) {
           </div>
 
           {/* Price badge */}
-          <div className="absolute top-3 right-3 px-2.5 py-0.5 rounded-full bg-black/70 border border-white/15 text-white font-bold text-sm z-10">
-            ${deck.price}
+          <div className="absolute top-3 right-3 flex flex-col items-end gap-1 z-10">
+            <div className="px-2.5 py-0.5 rounded-full bg-black/70 border border-white/15 text-white font-bold text-sm">
+              {deck.elitePrice ? `From $${deck.price}` : `$${deck.price}`}
+            </div>
+            {deck.elitePrice && (
+              <div className="px-2 py-0.5 rounded-full bg-black/70 border border-white/15 text-[10px] font-bold tracking-wide flex items-center gap-1">
+                <span className="text-gray-400">CORE</span>
+                <span className="text-white/30">·</span>
+                <span style={{ color: deck.accentColor }}>ELITE</span>
+              </div>
+            )}
           </div>
 
           {/* Color identity dots - bottom */}

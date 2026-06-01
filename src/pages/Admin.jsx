@@ -142,6 +142,16 @@ function generateDecksJs(deckList) {
       .map(s => `      { section: ${JSON.stringify(s.section)}, cards: ${JSON.stringify(s.cards)} }`)
       .join(',\n');
     const included = (deck.included || []).map(i => `"${i}"`).join(', ');
+    // Elite tier fields (optional — omitted entirely for single-tier decks)
+    const eliteDecklist = (deck.eliteDecklist || [])
+      .map(s => `      { section: ${JSON.stringify(s.section)}, cards: ${JSON.stringify(s.cards)} }`)
+      .join(',\n');
+    const eliteIncluded = (deck.eliteIncluded || []).map(i => `"${i}"`).join(', ');
+    const eliteFields = deck.elitePrice != null ? `
+    elitePrice: ${deck.elitePrice},
+    eliteStripePrice: ${JSON.stringify(deck.eliteStripePrice || '')},
+    eliteDecklist: [\n${eliteDecklist}\n    ],
+    eliteIncluded: [${eliteIncluded}],` : '';
     return `  {
     id: ${deck.id},
     name: ${JSON.stringify(deck.name)},
@@ -171,7 +181,7 @@ function generateDecksJs(deckList) {
     quantity: ${deck.quantity ?? 10},
     stripePrice: ${JSON.stringify(deck.stripePrice || '')},
     ourCost: ${deck.ourCost ?? 0},
-    slug: ${JSON.stringify(deck.slug || toSlug(deck.name || ''))},
+    slug: ${JSON.stringify(deck.slug || toSlug(deck.name || ''))},${eliteFields}
   }`;
   }).join(',\n');
 
