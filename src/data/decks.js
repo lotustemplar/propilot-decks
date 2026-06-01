@@ -230,7 +230,7 @@ export const decks = [
     colors: ["white","red","green"],
     colorLabel: "Naya",
     difficulty: 4,
-    playstyles: ["Aggro","Go Wide","Ramp"],
+    playstyles: ["Equipment","Voltron","Aggro"],
     description: "Equip legendary weapons, attack with synergistic creatures, and draw cards from every swing. Build the ultimate SOLDIER.",
     image: `${import.meta.env.BASE_URL}images/cloud.png`,
     gradientFrom: "#0e0800",
@@ -321,4 +321,5 @@ export const playstyleMeta = [
   "Aggro", "Tokens", "Aristocrats", "Sacrifice", "Spellslinger",
   "Ramp", "Lifegain", "Control", "Reanimator", "Storm",
   "Counters", "Tribal", "Drain", "Go Wide", "Superfriends",
+  "Equipment", "Voltron",
 ];

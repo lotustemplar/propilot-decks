@@ -39,6 +39,8 @@ const QUICK_STRATEGY_TIPS = {
   Drain: "Drain life with each action. Choke opponents slowly.",
   'Go Wide': "Many small creatures beat large single threats.",
   Superfriends: "Protect planeswalkers. Their ultimates win the game.",
+  Equipment: "Attach powerful weapons to your best creature. Recur and redeploy.",
+  Voltron: "Stack equipment and auras on one unstoppable commander. One-shot opponents.",
 };
 
 export default function DeckCard({ deck, animationsEnabled }) {
