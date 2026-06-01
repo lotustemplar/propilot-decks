@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'RESEND_API_KEY not configured.' });
   }
 
-  const { deckId, deckName, deckPrice } = req.body ?? {};
+  const { deckId, deckSlug, deckName, deckPrice } = req.body ?? {};
   if (!deckId || !deckName) return res.status(400).json({ error: 'Missing deckId or deckName.' });
 
   try {
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     if (!subscribers.length) return res.status(200).json({ sent: 0 });
 
     const siteUrl = process.env.SITE_URL || 'https://lotusprodecks.com';
-    const deckUrl = `${siteUrl}/deck/${deckId}`;
+    const deckUrl = `${siteUrl}/deck/${deckSlug || deckId}`;
     let sent = 0;
 
     for (const contact of subscribers) {

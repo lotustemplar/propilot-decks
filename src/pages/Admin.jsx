@@ -903,6 +903,7 @@ export default function Admin() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 deckId:    String(finalDeck.id),
+                deckSlug:  finalDeck.slug || '',
                 deckName:  finalDeck.name,
                 deckPrice: finalDeck.price,
               }),
